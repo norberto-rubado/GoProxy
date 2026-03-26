@@ -247,3 +247,7 @@ printf 'your-password' | shasum -a 256
 - 支持 WebUI 密码初始化和修改
 - 为失败计数、重试和删除策略补齐一致的状态流转
 - 增加自动化测试
+
+## 致谢
+
+认可 [LINUX DO](https://linux.do/)
