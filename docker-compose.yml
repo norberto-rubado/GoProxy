@@ -1,11 +1,11 @@
 services:
   goproxy:
     # 使用预构建镜像（每次部署自动拉取最新版本）
-    image: ghcr.io/isboyjc/goproxy:latest
-    pull_policy: always
-    
-    # 或使用本地构建（取消下面注释，注释上面的 image 和 pull_policy 行）
-    # build: .
+    # image: ghcr.io/isboyjc/goproxy:latest
+    # pull_policy: always
+
+    # 使用本地构建（包含 SOCKS5 MITM 检测修复）
+    build: .
     
     container_name: ${CONTAINER_NAME:-goproxy}
     restart: unless-stopped
