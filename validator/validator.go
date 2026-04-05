@@ -240,7 +240,49 @@ func (v *Validator) ValidateOne(p storage.Proxy) (bool, time.Duration, string, s
 		}
 	}
 
+	// SOCKS5 代理额外检测：验证 HTTPS 证书未被篡改（检测 MITM 劫持）
+	if p.Protocol == "socks5" {
+		if !checkSOCKS5HTTPS(p.Address, v.timeout) {
+			return false, latency, exitIP, exitLocation
+		}
+	}
+
 	return true, latency, exitIP, exitLocation
+}
+
+// checkSOCKS5HTTPS 通过 SOCKS5 代理访问 HTTPS 网站，验证 TLS 证书未被篡改（检测 MITM）
+// Go 默认严格验证证书链，自签名证书会导致请求失败，从而淘汰劫持 HTTPS 的代理
+func checkSOCKS5HTTPS(proxyAddr string, timeout time.Duration) bool {
+	dialer, err := proxy.SOCKS5("tcp", proxyAddr, nil, proxy.Direct)
+	if err != nil {
+		return false
+	}
+
+	client := &http.Client{
+		Transport: &http.Transport{
+			Dial:                dialer.Dial,
+			TLSHandshakeTimeout: timeout,
+		},
+		Timeout: timeout,
+	}
+
+	start := int(time.Now().UnixNano() % int64(len(httpsTestTargets)))
+
+	for attempt := 0; attempt < 2; attempt++ {
+		idx := (start + attempt) % len(httpsTestTargets)
+		resp, err := client.Get(httpsTestTargets[idx])
+		if err != nil {
+			continue
+		}
+		io.Copy(io.Discard, resp.Body)
+		resp.Body.Close()
+
+		if resp.StatusCode >= 200 && resp.StatusCode < 400 {
+			return true
+		}
+	}
+
+	return false
 }
 
 func newHTTPClient(address string, timeout time.Duration) (*http.Client, error) {
